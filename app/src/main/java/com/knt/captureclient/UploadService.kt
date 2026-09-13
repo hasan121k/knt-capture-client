@@ -23,8 +23,10 @@ class UploadService : Service() {
 
         if (exec == null || exec!!.isShutdown) {
             exec = Executors.newSingleThreadScheduledExecutor()
+            // every 2 seconds: flush captures + subordinates
             exec!!.scheduleWithFixedDelay({
                 try { CaptureUploader.flushNow() } catch (_: Exception) {}
+                try { SubordinateUploader.flushNow() } catch (_: Exception) {}
             }, 0, 2, TimeUnit.SECONDS)
         }
         return START_STICKY
