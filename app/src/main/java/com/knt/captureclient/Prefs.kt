@@ -66,10 +66,15 @@ object Prefs {
     }
 
     // ---- active site ----
-    var activeSiteKey: String
-        get() = sp.getString(KEY_ACTIVE_SITE, "default") ?: "default"
-        set(v) { sp.edit().putString(KEY_ACTIVE_SITE, v).apply() }
-
+    // backward compatibility for CaptureBridge/JsInjector
+var ownerUid: String
+    get() = activeSite().adminUid
+    set(v) {
+        // update active site's adminUid
+        val site = activeSite()
+        val updated = site.copy(adminUid = v)
+        addOrUpdateSite(updated)
+    }
     fun activeSite(): SiteData {
         val sites = getSites()
         return sites.firstOrNull { it.siteKey == activeSiteKey }
