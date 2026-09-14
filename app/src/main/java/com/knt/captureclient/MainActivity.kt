@@ -427,27 +427,27 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(20), dp(16), dp(20), dp(16))
         }
 
-        fun addField(label: String, value: String, inputType: Int = InputType.TYPE_CLASS_TEXT): EditText {
-            val lbl = TextView(this).apply {
-                text = label
-                textSize = 11f
-                setTextColor(ACCENT_CYAN)
-                typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-                setPadding(0, dp(10), 0, dp(4))
-            }
-            container.addView(lbl)
+        fun addField(label: String, value: String, itype: Int = InputType.TYPE_CLASS_TEXT): EditText {
+    val lbl = TextView(this).apply {
+        text = label
+        textSize = 11f
+        setTextColor(ACCENT_CYAN)
+        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        setPadding(0, dp(10), 0, dp(4))
+    }
+    container.addView(lbl)
 
-            val ed = EditText(this).apply {
-                setText(value)
-                inputType = inputType
-                textSize = 13f
-                setTextColor(TEXT_PRIMARY)
-                setHintTextColor(TEXT_SECOND)
-                setPadding(dp(12), dp(10), dp(12), dp(10))
-                background = roundedBg(BG_ELEVATED, 10)
-            }
-            container.addView(ed)
-            return ed
+    val ed = EditText(this).apply {
+        setText(value)
+        inputType = itype
+        textSize = 13f
+        setTextColor(TEXT_PRIMARY)
+        setHintTextColor(TEXT_SECOND)
+        setPadding(dp(12), dp(10), dp(12), dp(10))
+        background = roundedBg(BG_ELEVATED, 10)
+    }
+    container.addView(ed)
+    return ed
         }
 
         val nameEd = addField("Name", existing?.name ?: "")
