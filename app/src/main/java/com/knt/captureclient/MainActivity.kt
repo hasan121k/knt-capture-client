@@ -460,30 +460,32 @@ class MainActivity : AppCompatActivity() {
             addView(container)
         }
 
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(if (existing == null) "➕  Add New Site" else "✏  Edit Site")
-            .setView(scroll)
-            .setPositiveButton("SAVE") { _, _ ->
-                val site = SiteData(
-                    name = nameEd.text.toString().trim(),
-                    siteKey = keyEd.text.toString().trim().lowercase().replace(" ", "_"),
-                    registerUrl = regEd.text.toString().trim(),
-                    adminUrl = admEd.text.toString().trim(),
-                    adminUid = uidEd.text.toString().trim()
-                )
-                if (site.name.isBlank() || site.siteKey.isBlank()
-                    || site.registerUrl.isBlank() || site.adminUid.isBlank()) {
-                    Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                Prefs.addOrUpdateSite(site)
-                refreshSitesList()
-                Toast.makeText(this, "✓ Saved", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Cancel", null)
-            .create()
+        val builder = AlertDialog.Builder(this)
+builder.setTitle(if (existing == null) "➕  Add New Site" else "✏  Edit Site")
+builder.setView(scroll)
+builder.setPositiveButton("SAVE") { _, _ ->
+    val site = SiteData(
+        name = nameEd.text.toString().trim(),
+        siteKey = keyEd.text.toString().trim().lowercase().replace(" ", "_"),
+        registerUrl = regEd.text.toString().trim(),
+        adminUrl = admEd.text.toString().trim(),
+        adminUid = uidEd.text.toString().trim()
+    )
+    if (site.name.isBlank() || site.siteKey.isBlank()
+        || site.registerUrl.isBlank() || site.adminUid.isBlank()) {
+        Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show()
+        return@setPositiveButton
+    }
+    Prefs.addOrUpdateSite(site)
+    refreshSitesList()
+    Toast.makeText(this, "✓ Saved", Toast.LENGTH_SHORT).show()
+}
+builder.setNegativeButton("Cancel", null)
+val dialog = builder.create()
+dialog.show()
 
-        dialog.show()
+dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ACCENT_GREEN)
+dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(TEXT_SECOND)
 
         // color the buttons
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ACCENT_GREEN)
