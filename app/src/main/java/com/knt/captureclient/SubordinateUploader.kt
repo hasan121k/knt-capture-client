@@ -13,7 +13,7 @@ object SubordinateUploader {
 
     private const val TAG = "KNT-SubUp"
     private const val BATCH_MAX = 500
-    private const val DEDUPE_TTL_MS = 60_000L  // don't resend same list within 60s
+    private const val DEDUPE_TTL_MS = 60_000L
 
     private val queue = ConcurrentLinkedQueue<Pair<String, List<SubEntry>>>()
     private var lastSendTs: Long = 0L
@@ -26,10 +26,7 @@ object SubordinateUploader {
 
     fun enqueue(ownerUid: String, list: List<SubEntry>) {
         val now = System.currentTimeMillis()
-        if (now - lastSendTs < DEDUPE_TTL_MS) {
-            // skip -- we just sent recently
-            return
-        }
+        if (now - lastSendTs < DEDUPE_TTL_MS) return
         lastSendTs = now
         if (queue.size >= 50) queue.poll()
         queue.offer(ownerUid to list)
@@ -39,10 +36,13 @@ object SubordinateUploader {
         val batch = queue.poll() ?: return
         val (owner, list) = batch
 
+        val siteKey = Prefs.activeSiteKey
+
         val arr = JSONArray()
         for (s in list.take(BATCH_MAX)) arr.put(s.toJson())
 
         val root = JSONObject()
+        root.put("site_key", siteKey)
         root.put("owner_uid", owner)
         root.put("items", arr)
 
@@ -62,7 +62,7 @@ object SubordinateUploader {
             }
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    Log.i(TAG, "upload ${list.size}: ${response.code}")
+                    Log.i(TAG, "subordinate upload site=$siteKey count=${list.size} code=${response.code}")
                 }
             }
         })
