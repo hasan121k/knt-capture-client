@@ -486,10 +486,6 @@ dialog.show()
 
 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ACCENT_GREEN)
 dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(TEXT_SECOND)
-
-        // color the buttons
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ACCENT_GREEN)
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(TEXT_SECOND)
     }
 
     // ================================================================
