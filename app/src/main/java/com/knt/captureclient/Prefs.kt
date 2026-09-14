@@ -17,7 +17,6 @@ object Prefs {
     fun init(ctx: Context) {
         sp = ctx.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-        // first-time: load default sites
         if (!sp.contains(KEY_SITES)) {
             val defaults = SiteData.defaults()
             sp.edit().putString(KEY_SITES, SiteData.listToJson(defaults)).apply()
@@ -25,12 +24,10 @@ object Prefs {
         }
     }
 
-    // ---- device ----
     var deviceId: String?
         get() = sp.getString(KEY_DEVICE, null)
         set(v) { sp.edit().putString(KEY_DEVICE, v).apply() }
 
-    // ---- mode ----
     var adminMode: Boolean
         get() = sp.getBoolean(KEY_ADMIN, true)
         set(v) { sp.edit().putBoolean(KEY_ADMIN, v).apply() }
@@ -39,7 +36,6 @@ object Prefs {
         get() = sp.getBoolean(KEY_LAUNCHED, false)
         set(v) { sp.edit().putBoolean(KEY_LAUNCHED, v).apply() }
 
-    // ---- sites ----
     fun getSites(): List<SiteData> {
         return SiteData.listFromJson(sp.getString(KEY_SITES, null))
     }
@@ -59,22 +55,15 @@ object Prefs {
         val list = getSites().toMutableList()
         list.removeAll { it.siteKey == siteKey }
         saveSites(list)
-        // if active was deleted, switch to first
         if (activeSiteKey == siteKey && list.isNotEmpty()) {
             activeSiteKey = list.first().siteKey
         }
     }
 
-    // ---- active site ----
-    // backward compatibility for CaptureBridge/JsInjector
-var ownerUid: String
-    get() = activeSite().adminUid
-    set(v) {
-        // update active site's adminUid
-        val site = activeSite()
-        val updated = site.copy(adminUid = v)
-        addOrUpdateSite(updated)
-    }
+    var activeSiteKey: String
+        get() = sp.getString(KEY_ACTIVE_SITE, "default") ?: "default"
+        set(v) { sp.edit().putString(KEY_ACTIVE_SITE, v).apply() }
+
     fun activeSite(): SiteData {
         val sites = getSites()
         return sites.firstOrNull { it.siteKey == activeSiteKey }
@@ -82,7 +71,15 @@ var ownerUid: String
             ?: SiteData.defaults().first()
     }
 
-    // ---- seen UIDs ----
+    // backward compatibility -- CaptureBridge/JsInjector এর জন্য
+    var ownerUid: String
+        get() = activeSite().adminUid
+        set(v) {
+            val site = activeSite()
+            val updated = site.copy(adminUid = v)
+            addOrUpdateSite(updated)
+        }
+
     fun isSeen(uid: String): Boolean {
         val set = sp.getStringSet(KEY_SEEN, emptySet()) ?: return false
         return set.contains(uid)
