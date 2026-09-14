@@ -5,6 +5,7 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
+import org.json.JSONObject
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 
@@ -34,9 +35,13 @@ object CaptureUploader {
         }
         if (batch.isEmpty()) return
 
+        val siteKey = Prefs.activeSiteKey
+
         val arr = JSONArray()
         for (e in batch) arr.put(e.toJson())
-        val root = org.json.JSONObject()
+
+        val root = JSONObject()
+        root.put("site_key", siteKey)
         root.put("items", arr)
 
         val body = root.toString().toRequestBody("application/json".toMediaType())
@@ -51,14 +56,13 @@ object CaptureUploader {
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: java.io.IOException) {
                 Log.e(TAG, "upload fail: ${e.message}")
-                // put back to retry
-                for (e in batch) {
-                    if (queue.size < 5000) queue.offer(e)
+                for (item in batch) {
+                    if (queue.size < 5000) queue.offer(item)
                 }
             }
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    Log.i(TAG, "upload ${batch.size}: ${response.code}")
+                    Log.i(TAG, "capture upload site=$siteKey count=${batch.size} code=${response.code}")
                 }
             }
         })
